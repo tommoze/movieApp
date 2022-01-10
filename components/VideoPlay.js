@@ -14,74 +14,61 @@ const VideoPlay = ({ id }) => {
     const [playing, setPlaying] = useState(false)
     const playerRef = useRef()
 
-    const getVideo = async () => {
+    const getVideo = useCallback(async () => {
         try {
             const response = await axios.get(`${URL}${fetchVideo(id)}`)
             const videos = response.data.results
             setVideo(videos.length === 0 ? null : choseTrailer(videos))
             setError(false)
-        } catch (error) {
-            console.error(error)
+        } catch (err) {
+            console.error(err)
             setError(true)
         } finally {
             setLoading(false)
         }
-    }
+    }, [setVideo, choseTrailer, fetchVideo, setError, setLoading])
 
-    const choseTrailer = (videos) => {
-        const oficialTrailersName = videos.filter(
+    const choseTrailer = useCallback((videos) => {
+        const oficialTrailers = videos.filter(
             (item) =>
                 item.type === 'Trailer' && item.name === 'Official Trailer'
         )
-        const otherOfficialTrailers = videos.filter(
-            (item) => item.type === 'Trailer' && item.official
-        )
-        const officialTeasers = videos.filter(
-            (item) => item.type === 'Teaser' && item.official
-        )
-        const officialClips = videos.filter(
-            (item) => item.type === 'Clip' && item.official
-        )
-        const officialFeaturettes = videos.filter(
-            (item) => item.type === 'Clip' && item.official
-        )
-        const officialBehindTheScenes = videos.filter(
-            (item) => item.type === 'Behind the Scenes' && item.official
-        )
-        const nonOfficial = videos.filter((item) => !item.official)
 
-        if (oficialTrailersName.length !== 0) {
-            return oficialTrailersName[0].key
-        } else if (otherOfficialTrailers.length !== 0) {
-            return otherOfficialTrailers[0].key
-        } else if (officialTeasers.length !== 0) {
-            return officialTeasers[0].key
-        } else if (officialClips.length !== 0) {
-            return officialClips[0].key
-        } else if (officialFeaturettes.length !== 0) {
-            return officialFeaturettes[0].key
-        } else if (officialBehindTheScenes.length !== 0) {
-            return officialBehindTheScenes[0].key
-        } else if (nonOfficial.length !== 0) {
-            return nonOfficial[0].key
-        } else {
-            return null
+        if (oficialTrailers.length) {
+            return oficialTrailers[0].key
         }
-    }
 
-    useEffect(() => {
-        getVideo()
-        if (error) {
-            console.log(error)
+        const types = [
+            'Trailer',
+            'Teaser',
+            'Clip',
+            'Featurette',
+            'Behind the Scenes',
+        ]
+        const oficialVideos = types
+            .map((type) =>
+                videos.filter((video) => video.type == type && video.official)
+            )
+            .reduce((acc, cur) => [...acc, ...cur], [])
+
+        if (oficialVideos.length) {
+            return oficialVideos[0].key
         }
+
+        return null
     }, [])
 
-    const onStateChange = useCallback((state) => {
-        if (state === 'ended') {
-            setPlaying(false)
-            Alert.alert('video has finished playing!')
-        }
-    }, [])
+    useEffect(getVideo, [])
+
+    const onStateChange = useCallback(
+        (state) => {
+            if (state === 'ended') {
+                setPlaying(false)
+                Alert.alert('video has finished playing!')
+            }
+        },
+        [setPlaying]
+    )
 
     return (
         <View style={{ flex: 1 }}>
